@@ -54,12 +54,9 @@ function validatePartitionBy() {
 function createRangePartitions() {
    while true; do
       partitionit=""
-      if [ ! -z "$partitionColumn" ] && [ ! -z "$partitionBy" ]; then
-         partitionit=" PARTITION BY $partitionBy ($partitionColumn) ";
-      fi
       suffix=$(date -d $start +%Y%m)
       tabname="${partname}${suffix}"
-      sql="CREATE TABLE ${schema}.${tabname} PARTITION OF ${schema}.${parentTable} FOR VALUES FROM ('$start') TO ('$next') $partitionit;"
+      sql="CREATE TABLE ${schema}.${tabname} PARTITION OF ${schema}.${parentTable} FOR VALUES FROM ('$start') TO ('$next') $subPartitionIt;"
       echo $sql
       start=$(date -d "$start 1 month" +%Y-%m-%d)
       next=$(date -d "$start 1 month" +%Y-%m-%d)
@@ -76,7 +73,7 @@ function createListPartitions() {
    do
       lowerValue=$(echo $value | tr '[:upper:]' '[:lower:]' )
       childTable=$parentTable"_"$lowerValue
-      echo "CREATE TABLE $childTable PARTITION OF $parentTable FOR VALUES IN ('$value');"
+      echo "CREATE TABLE $childTable PARTITION OF $parentTable FOR VALUES IN ('$value') $subPartitionIt;"
    done < $partitionList
 }
 
@@ -87,7 +84,7 @@ function createHashPartition() {
    { 
       partnum=$(( $i + 1 ))
       childTable=$parentTable"_"$partnum
-      echo "CREATE TABLE $childTable PARTITION OF $parentTable FOR VALUES WITH (MODULUS $partitionCount, REMAINDER $i);"
+      echo "CREATE TABLE $childTable PARTITION OF $parentTable FOR VALUES WITH (MODULUS $partitionCount, REMAINDER $i) $subPartitionIt;"
    }
 }
 
@@ -95,7 +92,6 @@ function createHashPartition() {
 # Getopts variables
 
 partition=0
-createList=0
 
 pastYears=1
 futureYears=1
@@ -106,35 +102,93 @@ partitionBy=""
 partitionColumn=""
 partitionList=""
 partitionCount=0
+subPartitionIt=""
+subPartitionColumn=""
+subPartitionBy=""
 
 
-while getopts f:t:s:y:Y:c:o:l:n:p? name
+while getopts f:t:s:y:Y:c:C:o:O:l:n:p? name
 do
    case $name in
-      f) fileName="$OPTARG";;
-      t) parentTable="$OPTARG";;
-      s) schema="$OPTARG";;
-      y) futureYears="$OPTARG";;
-      Y) pastYears="$OPTARG";;
+      f) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -f"
+         fi
+         fileName="$OPTARG";;
+
+      t) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -t"
+         fi
+         parentTable="$OPTARG";;
+
+      s) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -s"
+         fi
+         schema="$OPTARG";;
+
+      y) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -y"
+         fi
+         futureYears="$OPTARG";;
+      Y) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -Y"
+         fi
+         pastYears="$OPTARG";;
       p) partition=1;;
-      l) partitionList="$OPTARG";;
-      n) partitionCount="$OPTARG";;
-      o) partitionBy="$OPTARG";;
-      c) partitionColumn="$OPTARG";;
+      l) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -l"
+         fi
+         partitionList="$OPTARG";;
+      n) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -n"
+         fi
+         partitionCount="$OPTARG";;
+      O) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -O"
+         fi
+         subPartitionBy="$OPTARG";;
+      o) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -o"
+         fi
+         partitionBy="$OPTARG";;
+      c) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -c"
+         fi
+         partitionColumn="$OPTARG";;
+      C) if [ -z "$OPTARG" -o "${OPTARG:0:1}" = "-" ] ; then
+            usage "Missing value after -C"
+         fi
+         subPartitionColumn="$OPTARG";;
       *) usage "Please use approopriate options";; 
       ?) usage "Please use approopriate options";; 
    esac
 done
 shift $(($OPTIND - 1))
 
-
-if [ "$partition" -eq 1 ] && [ -z "$partitionColumn" ]; then
-   usage "Missing column name to partition by"
+if [ -z "$parentTable" ]; then
+   usage "Missing name of parent table to use for partitioning"
 fi
 
-if [ "$partition" -eq 1 ] && [ -z "$partitionBy" ]; then
-   usage "Missing declarative partition type. Must be: hash, list or range"
+if [ -z "$parentTable" ] && [ -z "$filename" ]; then
+   usage "Missing name of parent table to use for partitioning"
 fi
+
+
+
+
+if [ "$partition" -eq 1 ] && [ -z "$subPartitionColumn" ]; then
+   usage "Missing column name to partition by for sub partitions"
+fi
+
+if [ "$partition" -eq 1 ] && [ -z "$subPartitionBy" ]; then
+   usage "Missing declarative partition type for sub partitions. Must be: hash, list or range"
+fi
+
+# Passed all checks. 
+if [ "$partition" -eq 1 ]; then
+   subPartitionIt=" PARTITION BY $subPartitionBy ($subPartitionColumn) ";
+fi
+
+
 
 if [ -z "$partitionBy" ]; then
    usage "Missing declarative partition type. Must be: hash, list or range"
@@ -143,16 +197,13 @@ else
 fi
 
 
+
+
+
+
+
 if [ -z "$schema" ]; then
    schema="public"
-fi
-
-if [ -z "$parentTable" ]; then
-   usage "Missing name of parent table to use for partitioning"
-fi
-
-if [ -z "$parentTable" ] && [ -z "$filename" ]; then
-   usage "Missing name of parent table to use for partitioning"
 fi
 
 if [ -z "$partname" ] ; then
@@ -170,7 +221,6 @@ fi
 if [ ! -z "$pastYears" ]; then
    validateNumber $pastYears
 fi
-
 
 
 start=$(date +%Y-%m-01 -d "-${pastYears} year")
