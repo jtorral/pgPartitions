@@ -98,7 +98,7 @@ Which generates the following
 
 ### Sub partitioning 
 
-Assuming we created the foobar table and it is partitioned by list and we want to partition those partitions by range
+Assuming we created the foobar table and it is partitioned by list and we want to partition those partitions by hash on the column userid.
 
 
     ./genPartitions.sh -t foobar -o list -l values.txt -p -O hash -C userid -f
