@@ -3,7 +3,7 @@
 function usage() {
 
    echo -e
-   echo -e "partition.sh "
+   echo -e "genPartitions.sh "
    echo -e
    echo -e "    Options:  -s schema "
    echo -e "              -t Parent table.  "
@@ -16,6 +16,7 @@ function usage() {
    echo -e "              -p Create a sub-partition partition"
    echo -e "              -O Partition type for sub-partition ( list, range, hash )"
    echo -e "              -C Partition column name for sub-partition"
+   echo -e "              -f Create a file containing the partitions"
    echo -e 
 
    if [ ! -z "$1" ]; then
@@ -70,6 +71,9 @@ function createRangePartitions() {
       tabname="${parentTable}_${suffix}"
       sql="CREATE TABLE ${schema}.${tabname} PARTITION OF ${schema}.${parentTable} FOR VALUES FROM ('$start') TO ('$next') $subPartitionIt;"
       echo $sql
+      if [ "$createFile" -eq 1 ]; then
+         echo "${tabname}" >> $partitionFileList
+      fi
       start=$(date -d "$start 1 month" +%Y-%m-%d)
       next=$(date -d "$start 1 month" +%Y-%m-%d)
       if [ "$start" == "$end" ]; then
@@ -86,6 +90,9 @@ function createListPartitions() {
       lowerValue=$(echo $value | tr '[:upper:]' '[:lower:]' )
       childTable=$parentTable"_"$lowerValue
       echo "CREATE TABLE  ${schema}.${childTable} PARTITION OF ${schema}.${parentTable} FOR VALUES IN ('$value') $subPartitionIt;"
+      if [ "$createFile" -eq 1 ]; then
+         echo "${childTable}" >> $partitionFileList
+      fi
    done < $partitionList
 }
 
@@ -97,6 +104,9 @@ function createHashPartition() {
       partnum=$(( $i + 1 ))
       childTable=$parentTable"_"$partnum
       echo "CREATE TABLE ${schema}.${childTable} PARTITION OF ${schema}.${parentTable} FOR VALUES WITH (MODULUS $partitionCount, REMAINDER $i) $subPartitionIt;"
+      if [ "$createFile" -eq 1 ]; then
+         echo "${childTable}" >> $partitionFileList
+      fi
    }
 }
 
@@ -107,7 +117,6 @@ partition=0
 
 pastYears=0
 futureYears=1
-fileName=""
 parentTable=""
 schema=""
 partitionBy=""
@@ -117,14 +126,13 @@ partitionCount=0
 subPartitionIt=""
 subPartitionColumn=""
 subPartitionBy=""
+createFile=0
+partitionFileList='partitons.txt'
 
 
-while getopts f:t:s:y:Y:c:C:o:O:l:n:p? name
+while getopts t:s:y:Y:c:C:o:O:l:n:pf? name
 do
    case $name in
-      f) 
-         checkOpt "$OPTARG" "-f" 
-         fileName="$OPTARG";;
 
       t) 
          checkOpt "$OPTARG" "-t" 
@@ -168,14 +176,20 @@ do
          checkOpt "$OPTARG" "-C" 
          subPartitionColumn="$OPTARG";;
 
-      *) usage "Please use approopriate options";; 
-      ?) usage "Please use approopriate options";; 
+      f) 
+         createFile=1;;
+
+      *) usage "Please use appropriate options";; 
+
+      ?) usage "Please use appropriate options";; 
    esac
 done
-
 shift $(($OPTIND - 1))
 
 # Some checks. 
+if [ "$createFile" -eq 1 ]; then
+   cat /dev/null > $partitionFileList
+fi
 
 if [ -z "$parentTable" ]; then
    usage "Missing name of parent table to use for partitioning"
