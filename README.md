@@ -156,17 +156,19 @@ With the `-f` option when we created original partitions
 
 You can simply place your column names inside double quotes to generate a multi column partition statement.
 
-   ./genPartitions.sh -t foobar -o list -l values.txt -p -O hash -C "userid, dob" -f
 
-Which generates the following ...
 
-   CREATE TABLE  public.foobar_red PARTITION OF public.foobar FOR VALUES IN ('RED')  PARTITION BY hash (userid, dob) ;
-   CREATE TABLE  public.foobar_white PARTITION OF public.foobar FOR VALUES IN ('WHITE')  PARTITION BY hash (userid, dob) ;
-   CREATE TABLE  public.foobar_blue PARTITION OF public.foobar FOR VALUES IN ('BLUE')  PARTITION BY hash (userid, dob) ;
-   CREATE TABLE  public.foobar_green PARTITION OF public.foobar FOR VALUES IN ('GREEN')  PARTITION BY hash (userid, dob) ;
+    ./genPartitions.sh -t foobar -o list -l values.txt -p -O hash -C "userid, dob" -f  
+
+  
+Which generates the following ...  
+  
+
+    CREATE TABLE public.foobar_red PARTITION OF public.foobar FOR VALUES IN ('RED') PARTITION BY hash (userid, dob) ;  
+    CREATE TABLE public.foobar_white PARTITION OF public.foobar FOR VALUES IN ('WHITE') PARTITION BY hash (userid, dob) ;  
+    CREATE TABLE public.foobar_blue PARTITION OF public.foobar FOR VALUES IN ('BLUE') PARTITION BY hash (userid, dob) ;  
+    CREATE TABLE public.foobar_green PARTITION OF public.foobar FOR VALUES IN ('GREEN') PARTITION BY hash (userid, dob) ;
 
 
 
 This is still work in progress so I am open to suggestions and improvements.
-
-
