@@ -121,9 +121,9 @@ If you wanted to create on just 1 of the partitions for the table with white for
 
 Would generate the following
 
-    CREATE TABLE public.foobar_white_1 PARTITION OF public.foobar_white FOR VALUES WITH (MODULUS 5, REMAINDER 0) ;  
-    CREATE TABLE public.foobar_white_2 PARTITION OF public.foobar_white FOR VALUES WITH (MODULUS 5, REMAINDER 1) ;  
-    CREATE TABLE public.foobar_white_3 PARTITION OF public.foobar_white FOR VALUES WITH (MODULUS 5, REMAINDER 2) ;  
+    CREATE TABLE public.foobar_white_1 PARTITION OF public.foobar_white FOR VALUES WITH (MODULUS 3, REMAINDER 0) ;  
+    CREATE TABLE public.foobar_white_2 PARTITION OF public.foobar_white FOR VALUES WITH (MODULUS 3, REMAINDER 1) ;  
+    CREATE TABLE public.foobar_white_3 PARTITION OF public.foobar_white FOR VALUES WITH (MODULUS 3, REMAINDER 2) ;  
     
 
 
